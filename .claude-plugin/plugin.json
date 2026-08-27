@@ -1,0 +1,9 @@
+{
+  "name": "async-imagegen",
+  "version": "0.3.0",
+  "description": "Asynchronous gpt-image-2 generation through a local worker, exposed to Claude Code.",
+  "author": {
+    "name": "guo"
+  },
+  "keywords": ["image-generation", "async", "gpt-image-2", "mcp"]
+}

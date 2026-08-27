@@ -1,0 +1,4 @@
+interface:
+  display_name: "Async Image Generation"
+  short_description: "Submit image jobs without blocking the current task."
+  default_prompt: "Use $async-imagegen to generate an image in the background."

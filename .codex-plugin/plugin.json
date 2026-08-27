@@ -1,0 +1,26 @@
+{
+  "name": "async-imagegen",
+  "version": "0.2.0+codex.20260818104027",
+  "description": "Submit OpenAI gpt-image-2 generation jobs to a detached local worker and collect their results.",
+  "author": {
+    "name": "Local developer"
+  },
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Async Imagegen",
+    "shortDescription": "Submit image jobs without blocking the current task.",
+    "longDescription": "Async Imagegen manages local queued, running, completed, and failed OpenAI image generation jobs with optional streamed previews.",
+    "developerName": "Local developer",
+    "category": "Productivity",
+    "capabilities": [
+      "Background jobs",
+      "Image generation",
+      "Partial previews"
+    ],
+    "defaultPrompt": [
+      "Generate an image in the background.",
+      "Check an async image job.",
+      "Collect the completed image path."
+    ]
+  }
+}
