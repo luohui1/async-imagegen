@@ -99,6 +99,7 @@ class AsyncImageGenTests(unittest.TestCase):
         self.env["ASYNC_IMAGEGEN_HOME"] = self.temp.name
         self.env["ASYNC_IMAGEGEN_BASE_URL"] = self.base_url
         self.env["OPENAI_API_KEY"] = "test-secret-key"
+        self.env["ASYNC_IMAGEGEN_NO_USER_ENV"] = "1"
 
     def tearDown(self):
         self.temp.cleanup()
@@ -143,15 +144,17 @@ class AsyncImageGenTests(unittest.TestCase):
         job = self.spawn()
         state = self.wait(job)
         self.assertEqual(state["status"], "completed")
-        self.assertEqual(FakeImageHandler.last_request["size"], "2048x1152")
-        self.assertEqual(FakeImageHandler.last_request["quality"], "low")
-        self.assertEqual(FakeImageHandler.last_request["output_format"], "jpeg")
-        self.assertEqual(FakeImageHandler.last_request["output_compression"], 80)
+        self.assertEqual(FakeImageHandler.last_request["model"], "grok-imagine-image-2.0")
+        self.assertEqual(FakeImageHandler.last_request["resolution"], "2k")
+        self.assertEqual(FakeImageHandler.last_request["quality"], "medium")
+        self.assertEqual(FakeImageHandler.last_request["aspect_ratio"], "16:9")
+        self.assertEqual(FakeImageHandler.last_request["response_format"], "b64_json")
+        self.assertNotIn("output_format", FakeImageHandler.last_request)
         output = Path(state["output_paths"][0])
         self.assertEqual(output.read_bytes(), b"fake-image-bytes")
 
     def test_stream_worker_writes_partial_images(self):
-        job = self.spawn(partial_images=2)
+        job = self.spawn(partial_images=2, model="gpt-image-2")
         state = self.wait(job)
         self.assertEqual(state["status"], "completed")
         self.assertEqual(len(state["partial_paths"]), 2)

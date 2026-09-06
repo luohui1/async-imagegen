@@ -43,12 +43,11 @@ directory. Terminal statuses are `completed` and `failed`; nonterminal statuses 
 
 ## Configuration
 
-The CLI supports `--output-dir`, `--size`, `--quality`, `--output-format`, `--partial-images`,
+The CLI supports `--output-dir`, `--size`, `--resolution`, `--quality`, `--output-format`, `--partial-images`,
 `--max-retries`, `--timeout-seconds`, `--concurrency-limit`, `--base-url`, and `--json`. The default
-model is `gpt-image-2`, the default output is 2K landscape (`2048x1152`) at `low` quality with
-JPEG compression 80, the default concurrency limit is 2, and the default API base is
-`https://api.openai.com/v1`. `ASYNC_IMAGEGEN_BASE_URL` can override the API base for an offline fake
-server or a controlled gateway.
+model is `grok-imagine-image-2.0`. Grok output defaults to **2K** (`--resolution 2k`, size `2048x1152`).
+Pass `--resolution 1k` only for faster drafts. Default quality is `high` (sent as Grok `medium`).
+`ASYNC_IMAGEGEN_BASE_URL` defaults to `https://cpa-ohio.turbo2c.xyz/v1`.
 
 Task state lives in `%LOCALAPPDATA%\async-imagegen` on Windows, `$XDG_STATE_HOME/async-imagegen`
 when configured, or `~/.local/state/async-imagegen` elsewhere. Set `ASYNC_IMAGEGEN_HOME` to choose a

@@ -49,15 +49,19 @@ def _spawn(arguments: dict[str, Any]) -> dict[str, Any]:
     args = SimpleNamespace(
         prompt=prompt,
         output_dir=str(output_dir) if output_dir else None,
-        size=str(arguments.get("size", "2048x1152")),
-        quality=str(arguments.get("quality", "low")),
+        size=str(arguments.get("size") or engine.DEFAULT_SIZE),
+        resolution=engine.grok_resolution(
+            {"resolution": arguments.get("resolution") or engine.os.environ.get("ASYNC_IMAGEGEN_RESOLUTION")}
+        ),
+        quality=str(arguments.get("quality", engine.DEFAULT_QUALITY)),
         output_format=output_format,
         output_compression=_int(arguments.get("output_compression"), 80, 0, 100),
         partial_images=_int(arguments.get("partial_images"), 0, 0, 3),
         max_retries=_int(arguments.get("max_retries"), 2, 0, 10),
         timeout_seconds=_int(arguments.get("timeout_seconds"), 300, 1, 3600),
         concurrency_limit=_int(arguments.get("concurrency_limit"), 2, 1, 32),
-        base_url=str(arguments.get("base_url") or engine.DEFAULT_BASE_URL),
+        base_url=str(arguments.get("base_url") or engine.os.environ.get("ASYNC_IMAGEGEN_BASE_URL") or engine.DEFAULT_BASE_URL),
+        model=str(arguments.get("model") or engine.os.environ.get("ASYNC_IMAGEGEN_MODEL") or engine.MODEL),
     )
     state = engine.create_job(args)
     pid = engine.start_worker(state["id"])
@@ -95,16 +99,18 @@ TOOLS = [
         "name": "async_imagegen_spawn",
         "title": "Start an asynchronous image job",
         "description": (
-            "Submit a paid gpt-image-2 image generation request to the local detached worker "
-            "and return a JOB immediately. The API key is read only from OPENAI_API_KEY."
+            "Submit a grok-imagine-image-2.0 generation request to the local detached worker "
+            "and return a JOB immediately. The API key is read from ASYNC_IMAGEGEN_API_KEY or OPENAI_API_KEY."
         ),
         "inputSchema": {
             "type": "object",
             "properties": {
                 "prompt": {"type": "string", "description": "Image generation prompt."},
                 "output_dir": {"type": "string", "description": "Optional final output directory."},
-                "size": {"type": "string", "default": "2048x1152", "description": "Image size."},
-                "quality": {"type": "string", "enum": ["low", "medium", "high", "auto"], "default": "low"},
+                "size": {"type": "string", "default": "2048x1152", "description": "Aspect-ratio hint. Default 2048x1152 (16:9). Does not downgrade Grok from 2K."},
+                "resolution": {"type": "string", "enum": ["1k", "2k"], "default": "2k", "description": "Grok output resolution. Default 2k. Pass 1k only for faster drafts."},
+                "quality": {"type": "string", "enum": ["low", "medium", "high", "auto"], "default": "high"},
+                "model": {"type": "string", "default": "grok-imagine-image-2.0"},
                 "output_format": {"type": "string", "enum": ["png", "jpeg", "webp"], "default": "jpeg"},
                 "output_compression": {"type": "integer", "minimum": 0, "maximum": 100, "default": 80},
                 "partial_images": {"type": "integer", "minimum": 0, "maximum": 3, "default": 0},
