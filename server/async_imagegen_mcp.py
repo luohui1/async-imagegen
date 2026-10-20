@@ -100,7 +100,7 @@ TOOLS = [
         "name": "async_imagegen_spawn",
         "title": "Start an asynchronous image job",
         "description": (
-            "Submit a grok-imagine-image-2.0 generation request to the local detached worker "
+            "Submit an image generation or image-to-image (reference_images) request to the local detached worker "
             "and return a JOB immediately. The API key is read from ASYNC_IMAGEGEN_API_KEY or OPENAI_API_KEY."
         ),
         "inputSchema": {

@@ -29,7 +29,7 @@ from pathlib import Path
 from typing import Any, Iterator
 
 
-MODEL = os.environ.get("ASYNC_IMAGEGEN_MODEL", "grok-imagine-image-2.0")
+MODEL = os.environ.get("ASYNC_IMAGEGEN_MODEL", "gpt-image-2.5-flare")
 DEFAULT_BASE_URL = os.environ.get("ASYNC_IMAGEGEN_BASE_URL", "https://cpa-ls-ohio-new.turbo2c.xyz/v1")
 PINNED_HOSTS = {
     "cpa-ohio.turbo2c.xyz": os.environ.get("ASYNC_IMAGEGEN_FORCE_IP", "18.117.229.92"),

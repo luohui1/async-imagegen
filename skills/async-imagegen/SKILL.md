@@ -1,20 +1,21 @@
 ---
 name: async-imagegen
-description: Submit OpenAI gpt-image-2 image generation jobs to a detached local worker when the current Codex task should continue without waiting for image generation. Use for background image creation, job status checks, partial previews, and collecting generated image paths.
+description: Submit image generation and image-to-image (multi-reference) jobs to a detached local worker through any OpenAI-compatible Images API, so the current task can continue without waiting. Use for background image creation, job status checks, partial previews, and collecting generated image paths.
 ---
 
 # Async Imagegen
 
 ## Overview
 
-Use the local `scripts/async_imagegen.py` CLI to submit a paid OpenAI Images API request and return
+Use the local `scripts/async_imagegen.py` CLI to submit a paid Images API request (OpenAI-compatible) and return
 immediately. The worker persists a job id, status, logs, partial previews, and the final image so a
 later command can inspect or collect the result.
 
 ## Prerequisites
 
-Set `OPENAI_API_KEY` in the environment before submitting a job. The key is read by the worker only
-from that variable and is not accepted as a command-line argument or written to task state. The
+Set `ASYNC_IMAGEGEN_API_KEY` (or `OPENAI_API_KEY`) and `ASYNC_IMAGEGEN_BASE_URL` in the environment
+before submitting a job. The key is read by the worker only from those variables and is not accepted as
+a command-line argument or written to task state. The
 plugin uses API quota and billing; it does not reuse Codex's built-in image generation allowance.
 
 ## Workflow
@@ -44,10 +45,11 @@ directory. Terminal statuses are `completed` and `failed`; nonterminal statuses 
 ## Configuration
 
 The CLI supports `--output-dir`, `--size`, `--resolution`, `--quality`, `--output-format`, `--partial-images`,
-`--max-retries`, `--timeout-seconds`, `--concurrency-limit`, `--base-url`, and `--json`. The default
-model is `grok-imagine-image-2.0`. Grok output defaults to **2K** (`--resolution 2k`, size `2048x1152`).
-Pass `--resolution 1k` only for faster drafts. Default quality is `high` (sent as Grok `medium`).
-`ASYNC_IMAGEGEN_BASE_URL` defaults to `https://cpa-ls-ohio-new.turbo2c.xyz/v1`.
+`--max-retries`, `--timeout-seconds`, `--concurrency-limit`, `--base-url`, `--reference-image`, and `--json`.
+The default model is `gpt-image-2.5-flare` (override with `--model` or `ASYNC_IMAGEGEN_MODEL`), the
+default size is **4K** landscape `3840x2160`, and the default quality is `high`. Pass a smaller `--size`
+(for example `1536x1024`) for faster drafts. `--resolution` (1k/2k) only applies to Grok models.
+Set the endpoint with `ASYNC_IMAGEGEN_BASE_URL` (an OpenAI-compatible `/v1` base URL) or `--base-url`.
 
 Task state lives in `%LOCALAPPDATA%\async-imagegen` on Windows, `$XDG_STATE_HOME/async-imagegen`
 when configured, or `~/.local/state/async-imagegen` elsewhere. Set `ASYNC_IMAGEGEN_HOME` to choose a
