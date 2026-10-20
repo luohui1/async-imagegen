@@ -10,6 +10,7 @@ import ctypes
 import gzip
 import http.client
 import json
+import mimetypes
 import os
 import secrets
 import socket
@@ -18,6 +19,7 @@ import subprocess
 import sys
 import tempfile
 import time
+import uuid
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -28,13 +30,13 @@ from typing import Any, Iterator
 
 
 MODEL = os.environ.get("ASYNC_IMAGEGEN_MODEL", "grok-imagine-image-2.0")
-DEFAULT_BASE_URL = os.environ.get("ASYNC_IMAGEGEN_BASE_URL", "https://cpa-ohio.turbo2c.xyz/v1")
+DEFAULT_BASE_URL = os.environ.get("ASYNC_IMAGEGEN_BASE_URL", "https://cpa-ls-ohio-new.turbo2c.xyz/v1")
 PINNED_HOSTS = {
     "cpa-ohio.turbo2c.xyz": os.environ.get("ASYNC_IMAGEGEN_FORCE_IP", "18.117.229.92"),
 }
 DEFAULT_CONCURRENCY = 2
 DEFAULT_TIMEOUT = 300
-DEFAULT_SIZE = "2048x1152"
+DEFAULT_SIZE = "3840x2160"
 DEFAULT_RESOLUTION = os.environ.get("ASYNC_IMAGEGEN_RESOLUTION", "2k")
 DEFAULT_QUALITY = "high"
 POLL_SECONDS = 0.5
@@ -357,6 +359,7 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     parser.add_argument("--size", default=DEFAULT_SIZE)
     parser.add_argument("--resolution", choices=("1k", "2k"), default=DEFAULT_RESOLUTION if DEFAULT_RESOLUTION in {"1k", "2k"} else "2k")
     parser.add_argument("--quality", choices=("low", "medium", "high", "auto"), default=DEFAULT_QUALITY)
+    parser.add_argument("--reference-image", action="append", default=[], help="reference image path (repeatable); uses /images/edits")
     parser.add_argument("--model", default=MODEL)
     parser.add_argument("--output-format", choices=("png", "jpeg", "webp"), default="jpeg")
     parser.add_argument("--output-compression", type=int, default=80)
@@ -411,6 +414,13 @@ def create_job(args: argparse.Namespace) -> dict[str, Any]:
     }
     if args.output_compression is not None:
         request["output_compression"] = args.output_compression
+    references = [str(Path(p).expanduser().resolve()) for p in (getattr(args, "reference_image", None) or [])]
+    for ref in references:
+        if not Path(ref).is_file():
+            raise ValueError(f"reference image not found: {ref}")
+    if references:
+        request["reference_images"] = references
+        request["partial_images"] = 0
     atomic_write_json(request_path(value), request)
     state = {
         "id": value,
@@ -512,7 +522,33 @@ def api_payload(request: dict[str, Any]) -> dict[str, Any]:
 
 
 def api_url(request: dict[str, Any]) -> str:
-    return str(request.get("base_url", DEFAULT_BASE_URL)).rstrip("/") + "/images/generations"
+    endpoint = "/images/edits" if request.get("reference_images") else "/images/generations"
+    return str(request.get("base_url", DEFAULT_BASE_URL)).rstrip("/") + endpoint
+
+
+def multipart_body(request: dict[str, Any]) -> tuple[bytes, str]:
+    boundary = uuid.uuid4().hex
+    crlf = b"\r\n"
+    chunks: list[bytes] = []
+    fields = {
+        "model": request_model(request),
+        "prompt": request["prompt"],
+        "size": request["size"],
+        "quality": request["quality"],
+        "output_format": request["output_format"],
+    }
+    if request.get("output_compression") is not None:
+        fields["output_compression"] = str(request["output_compression"])
+    for name, value in fields.items():
+        head = f'--{boundary}\r\nContent-Disposition: form-data; name="{name}"\r\n\r\n'
+        chunks.append(head.encode("utf-8") + str(value).encode("utf-8") + crlf)
+    for path in request["reference_images"]:
+        mime = mimetypes.guess_type(path)[0] or "image/png"
+        data = Path(path).read_bytes()
+        head = f'--{boundary}\r\nContent-Disposition: form-data; name="image[]"; filename="{Path(path).name}"\r\nContent-Type: {mime}\r\n\r\n'
+        chunks.append(head.encode("utf-8") + data + crlf)
+    chunks.append(f"--{boundary}--\r\n".encode("utf-8"))
+    return b"".join(chunks), f"multipart/form-data; boundary={boundary}"
 
 
 def pinned_ip_for_url(url: str) -> str:
@@ -611,7 +647,10 @@ def open_api_curl(url: str, body: bytes, key: str, pinned_ip: str, timeout: int)
             f"@{payload_file.name}",
             url,
         ]
-        result = subprocess.run(cmd, capture_output=True, text=True)
+        run_kwargs: dict[str, Any] = {"capture_output": True, "text": True}
+        if os.name == "nt":
+            run_kwargs["creationflags"] = getattr(subprocess, "CREATE_NO_WINDOW", 0x08000000)
+        result = subprocess.run(cmd, **run_kwargs)
         data = Path(body_file.name).read_bytes()
         raw_headers = Path(header_file.name).read_text(encoding="utf-8", errors="replace")
         headers: dict[str, str] = {}
@@ -640,18 +679,21 @@ def open_api(request: dict[str, Any]) -> Any:
     key = api_key()
     if not key:
         raise ImageGenError("OPENAI_API_KEY is not set")
-    body = json.dumps(api_payload(request)).encode("utf-8")
+    if request.get("reference_images"):
+        body, content_type = multipart_body(request)
+    else:
+        body, content_type = json.dumps(api_payload(request)).encode("utf-8"), "application/json"
     url = api_url(request)
     http_request = urllib.request.Request(
         url,
         data=body,
-        headers={"Authorization": f"Bearer {key}", "Content-Type": "application/json", "Accept-Encoding": "gzip, deflate"},
+        headers={"Authorization": f"Bearer {key}", "Content-Type": content_type, "Accept-Encoding": "gzip, deflate"},
         method="POST",
     )
     try:
         timeout = int(request["timeout_seconds"])
         pinned_ip = pinned_ip_for_url(url)
-        if pinned_ip and os.name == "nt":
+        if pinned_ip and os.name == "nt" and not request.get("reference_images"):
             return open_api_curl(url, body, key, pinned_ip, timeout)
         if pinned_ip:
             opener = urllib.request.build_opener(PinnedHTTPSHandler(pinned_ip))

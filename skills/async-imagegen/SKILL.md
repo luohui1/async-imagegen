@@ -47,7 +47,7 @@ The CLI supports `--output-dir`, `--size`, `--resolution`, `--quality`, `--outpu
 `--max-retries`, `--timeout-seconds`, `--concurrency-limit`, `--base-url`, and `--json`. The default
 model is `grok-imagine-image-2.0`. Grok output defaults to **2K** (`--resolution 2k`, size `2048x1152`).
 Pass `--resolution 1k` only for faster drafts. Default quality is `high` (sent as Grok `medium`).
-`ASYNC_IMAGEGEN_BASE_URL` defaults to `https://cpa-ohio.turbo2c.xyz/v1`.
+`ASYNC_IMAGEGEN_BASE_URL` defaults to `https://cpa-ls-ohio-new.turbo2c.xyz/v1`.
 
 Task state lives in `%LOCALAPPDATA%\async-imagegen` on Windows, `$XDG_STATE_HOME/async-imagegen`
 when configured, or `~/.local/state/async-imagegen` elsewhere. Set `ASYNC_IMAGEGEN_HOME` to choose a
@@ -63,3 +63,12 @@ image output tokens, so enable it only when earlier previews are useful.
 
 The implementation and Windows wrapper are in `scripts/`. Offline tests are in `tests/` and do not
 call OpenAI.
+
+## Reference images (image-to-image, multiple allowed)
+
+Pass one or more local images with `--reference-image PATH`; repeat the flag for several (CLI), or give
+`reference_images: ["C:/a.png", "C:/b.png"]` to the MCP `async_imagegen_spawn` tool. A job with
+references is sent to `/images/edits` as multipart `image[]` parts, in the order given; without
+references it uses `/images/generations`. Partial-image streaming is disabled for edits. Keep reference
+images modest (about 1024 px on the long side): very large files can make the upstream return 502.
+

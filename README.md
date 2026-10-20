@@ -56,3 +56,11 @@ tests with:
 ```text
 python -m unittest discover
 ```
+
+## Reference images
+
+`--reference-image PATH` (repeatable) or the MCP `reference_images` array attaches one or more local
+images and switches the job to the Images API edit endpoint (`/images/edits`, multipart `image[]`).
+Multiple references are supported and sent in order. Keep each around 1024 px on the long side to
+avoid upstream 502s on very large uploads.
+

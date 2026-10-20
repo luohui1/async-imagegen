@@ -48,6 +48,7 @@ def _spawn(arguments: dict[str, Any]) -> dict[str, Any]:
 
     args = SimpleNamespace(
         prompt=prompt,
+        reference_image=[str(p) for p in (arguments.get("reference_images") or [])],
         output_dir=str(output_dir) if output_dir else None,
         size=str(arguments.get("size") or engine.DEFAULT_SIZE),
         resolution=engine.grok_resolution(
@@ -107,10 +108,10 @@ TOOLS = [
             "properties": {
                 "prompt": {"type": "string", "description": "Image generation prompt."},
                 "output_dir": {"type": "string", "description": "Optional final output directory."},
-                "size": {"type": "string", "default": "2048x1152", "description": "Aspect-ratio hint. Default 2048x1152 (16:9). Does not downgrade Grok from 2K."},
+                "size": {"type": "string", "default": "3840x2160", "description": "Output size. Default 3840x2160 (4K, 16:9)."},
                 "resolution": {"type": "string", "enum": ["1k", "2k"], "default": "2k", "description": "Grok output resolution. Default 2k. Pass 1k only for faster drafts."},
                 "quality": {"type": "string", "enum": ["low", "medium", "high", "auto"], "default": "high"},
-                "model": {"type": "string", "default": "grok-imagine-image-2.0"},
+                "model": {"type": "string", "default": "gpt-image-2.5-flare"},
                 "output_format": {"type": "string", "enum": ["png", "jpeg", "webp"], "default": "jpeg"},
                 "output_compression": {"type": "integer", "minimum": 0, "maximum": 100, "default": 80},
                 "partial_images": {"type": "integer", "minimum": 0, "maximum": 3, "default": 0},
@@ -118,6 +119,7 @@ TOOLS = [
                 "timeout_seconds": {"type": "integer", "minimum": 1, "maximum": 3600, "default": 300},
                 "concurrency_limit": {"type": "integer", "minimum": 1, "maximum": 32, "default": 2},
                 "base_url": {"type": "string", "description": "Optional OpenAI-compatible API base URL."},
+                "reference_images": {"type": "array", "items": {"type": "string"}, "description": "Optional local reference image paths (absolute). When given, the job uses /images/edits (image-to-image) instead of text-to-image."},
             },
             "required": ["prompt"],
         },

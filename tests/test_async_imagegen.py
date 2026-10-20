@@ -185,5 +185,34 @@ class AsyncImageGenTests(unittest.TestCase):
                 self.assertNotIn("test-secret-key", path.read_text(encoding="utf-8", errors="replace"))
 
 
+
+class MultipartReferenceTests(unittest.TestCase):
+    def test_multiple_reference_images_are_sent_as_image_parts(self):
+        sys.path.insert(0, str(ROOT / "scripts"))
+        import async_imagegen as engine
+
+        with tempfile.TemporaryDirectory() as tmp:
+            paths = []
+            for name, data in (("a.png", b"AAA"), ("b.jpg", b"BBB")):
+                path = Path(tmp) / name
+                path.write_bytes(data)
+                paths.append(str(path))
+            request = {
+                "model": "gpt-image-2.5-flare",
+                "prompt": "merge",
+                "size": "1024x1024",
+                "quality": "high",
+                "output_format": "png",
+                "reference_images": paths,
+            }
+            body, content_type = engine.multipart_body(request)
+            self.assertTrue(content_type.startswith("multipart/form-data; boundary="))
+            self.assertEqual(body.count(b'name="image[]"'), 2)
+            self.assertIn(b'filename="a.png"', body)
+            self.assertIn(b'filename="b.jpg"', body)
+            self.assertLess(body.index(b"AAA"), body.index(b"BBB"))
+            self.assertTrue(engine.api_url({**request, "base_url": "http://x/v1"}).endswith("/images/edits"))
+
+
 if __name__ == "__main__":
     unittest.main()
